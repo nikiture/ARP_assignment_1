@@ -3,5 +3,5 @@
 ## Architecture of the software
 The software for this simulator is structured as shown in the following picture:
 
-[![sketch of the architecture of the 3 processes running while the game is active!] (assignment1_architecturesketch.png)]
+![sketch of the architecture of the 3 processes running while the game is active!] (sketch/assignment1_architecturesketch.png)
 
