@@ -4,7 +4,8 @@
 
 The software for this simulator is structured as shown in the following picture:
 
-![sketch of the architecture of the 3 processes running while the game is active!] (sketch/assignment1_architecturesketch.png)
+![sketch of the architecture of the 3 processes running while the game is active!](sketch/assignment1_architecturesketch.png)
+
 
 In the above picture D is the process responsible of the drone dynamics, M is the blackboard server and the process responsible of displaying the game map, and W is the watchdog process with the task of monitoring the activity of the other 2 processes.
 The changeable parameters of the dynamics are stored in the parameters file (*parmeters.txt* file), the status of the processes is stored in the logfile (*log_results.txt* file).
