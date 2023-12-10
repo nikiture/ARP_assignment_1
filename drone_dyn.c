@@ -47,7 +47,7 @@ void watchdog_req (int signumb) {
     }
 }
 
-void Terminate_all (int fd_1, int fd_2, int fd_3, int fd_4, void * pos_writer, sem_t * map_semaph, sem_t * kb_sem, void * kb_shm, int exit_status) {
+void Close_all (int fd_1, int fd_2, int fd_3, int fd_4, void * pos_writer, sem_t * map_semaph, sem_t * kb_sem, void * kb_shm, int exit_status) {
     if (fd_1 > 0) close (fd_1);
     if (fd_2 > 0) close (fd_2);
     if (fd_3 > 0) close (fd_3);
@@ -126,17 +126,17 @@ int Get_Kb_In (int kb_in, int * quit, int * reset, double * kb_forces_x, double 
 int update_BB (double * pos, sem_t * map_semaph, void * pos_writer) {
     if ((sem_wait (map_semaph)) < 0) {
         perror ("semaph taking");
-        Terminate_all (-1, -1, -1, -1, pos_writer, map_semaph, NULL, NULL, EXIT_FAILURE);
+        Close_all (-1, -1, -1, -1, pos_writer, map_semaph, NULL, NULL, EXIT_FAILURE);
     }
 
     void * syscall_res = memcpy (pos_writer, pos, 2 * sizeof (double));
     if (syscall_res == NULL) {
         perror ("shared memory writing");
-        Terminate_all (-1, -1, -1, -1, pos_writer, map_semaph, NULL, NULL, EXIT_FAILURE);
+        Close_all (-1, -1, -1, -1, pos_writer, map_semaph, NULL, NULL, EXIT_FAILURE);
     }
     if (sem_post (map_semaph) < 0) {
         perror ("semaph release");
-        Terminate_all (-1, -1, -1, -1, pos_writer, map_semaph, NULL, NULL, EXIT_FAILURE);
+        Close_all (-1, -1, -1, -1, pos_writer, map_semaph, NULL, NULL, EXIT_FAILURE);
     }
 }
 
@@ -196,29 +196,28 @@ int main (int argc, char ** argv) {
     fd_wtch = open (log_file [log_id], O_WRONLY, 0666);
     if (fd_wtch < 0) {
         perror ("open");
-        Terminate_all (-1, -1, -1, fd_wtch, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE); //null because shared memories not yet initialised
+        Close_all (-1, -1, -1, fd_wtch, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE); //null because shared memories not yet initialised
     }
 
     char logdata [10];
     int pid = getpid ();
-    //printf ("%d\n", pid);
 
     if (sprintf (logdata, "%d", pid) < 0) {
         perror ("pid formatting");
-        Terminate_all (-1, fd_wtch, -1, -1, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
+        Close_all (-1, fd_wtch, -1, -1, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
     }
 
     if (write (fd_wtch, logdata, sizeof (logdata)) < 0) {
         perror ("watchdog write");
 
-        Terminate_all (-1, fd_wtch, -1, -1, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
+        Close_all (-1, fd_wtch, -1, -1, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
     }
 
     char * param_file = "parameters.txt";
 
-    //string in which read parameters of simulation;
+    //string in which parameters of simulation are read;
     // 1 is force from keyboard, 2 is mass, 3 is friction coefficient, 
-    //4 is obstacle / wall force modifier and 5 is max distance from obstacle to perceive force
+    //4 is obstacle / wall force intensity and 5 is max distance from obstacle to perceive force
     char param_str [5 * sizeof(double)]; 
 
     
@@ -230,32 +229,33 @@ int main (int argc, char ** argv) {
 
     if ((fd_param = open (param_file, O_RDONLY)) < 0) {
         perror ("open: ");
-        Terminate_all (-1, -1, fd_wtch, -1, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
+        Close_all (-1, -1, fd_wtch, -1, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
     }
 
     int kb_fd = shm_open (KB_ADDR, O_RDWR, 0666);
     if (kb_fd < 0) {
         perror ("shared memory opening kb");
-        Terminate_all (-1, fd_param, fd_wtch, -1, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
+        Close_all (-1, fd_param, fd_wtch, -1, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
     }
 
     void * kb_ptr = mmap (0, sizeof (int), PROT_WRITE | PROT_READ, MAP_SHARED, kb_fd, 0);
     if (kb_ptr == MAP_FAILED) {
         perror ("shared memory kb mapping");
-        Terminate_all (-1, fd_wtch, fd_param, kb_fd, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
+        Close_all (-1, fd_wtch, fd_param, kb_fd, NULL, map_semaph, kb_sem, NULL, EXIT_FAILURE);
     }
     
     fd_out = shm_open (MAP_ADDR, O_CREAT | O_RDWR, 0666);
     if (fd_out < 0) { 
         perror ("open");
-        Terminate_all (fd_out, fd_wtch, fd_param, kb_fd, NULL, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
+        Close_all (fd_out, fd_wtch, fd_param, kb_fd, NULL, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
     }
 
     char pos_str [2 * sizeof (double)];
+
     void * pos_writer = mmap (0, 2 * sizeof (double), PROT_WRITE | PROT_READ, MAP_SHARED, fd_out, 0);
     if (pos_writer == MAP_FAILED) {
         perror ("shm mapping");
-        Terminate_all (fd_out, fd_param, fd_wtch, kb_fd, NULL, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
+        Close_all (fd_out, fd_param, fd_wtch, kb_fd, NULL, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
     }
     
     
@@ -269,8 +269,6 @@ int main (int argc, char ** argv) {
 
     double wall_force_x, wall_force_y;
 
-    struct timespec delta_time, rem_time;
-
     long int nsec_diff;
 
     long int time_to_sleep;
@@ -280,21 +278,23 @@ int main (int argc, char ** argv) {
     syscall_res = lseek (fd_param, 0, SEEK_SET);
     if (syscall_res < 0) {
         perror ("lseek");
-        Terminate_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
+        Close_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
     }
     syscall_res = read (fd_param, param_str, 5 * sizeof (double));
     if (syscall_res < 0) {
         perror ("param_read 1:");
-        Terminate_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
+        Close_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
     }
 
     syscall_res = sscanf (param_str, "%lf %lf %lf %lf %lf", &PROPULSION_STEP, &M, &K, &Eta, &ro_max);
     if (syscall_res < 0) {
         perror ("param_scan 1:");
-        Terminate_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
+        Close_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
     }
-    //multiplying by frequency instead of dividing by dt to avoid getting nan as result
+
     //values used in differential equation of drone
+    //multiplying by frequency instead of dividing by dt to avoid getting nan as result
+
     double K_1 = M * frequency * frequency;
     double K_2 = K * frequency;
     int kb_in;
@@ -304,18 +304,18 @@ int main (int argc, char ** argv) {
 
         if (sem_wait (kb_sem) < 0) {
             perror ("kb semaphore taking");
-            Terminate_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
+            Close_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
         }
 
         memcopy_res = memcpy (&kb_in, kb_ptr, sizeof (int));
         if (memcopy_res == NULL) {
             perror ("shared memory kb write");
-            Terminate_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
+            Close_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
         }
 
         if (sem_post (kb_sem) < 0) {
             perror ("kb semaphore release");
-            Terminate_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
+            Close_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE);
         }
 
                                 /*forces acting on drone*/
@@ -330,7 +330,7 @@ int main (int argc, char ** argv) {
         }
 
         if (quit == 1) {
-            Terminate_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_SUCCESS);
+            Close_all (fd_out, fd_param, fd_wtch, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_SUCCESS);
         }
 
         //obstacles
@@ -366,7 +366,9 @@ int main (int argc, char ** argv) {
 
 
                                     /*physics step simulation*/
-        //euler method: F = M* (xi-2 + xi - 2*xi-1)/dt^2 + K(xi - xi-1)/dt     
+        //euler method: F = M* (xi-2 + xi - 2*xi-1)/dt^2 + K(xi - xi-1)/dt  
+        //xi-2 is drone_x [0], xi-1 is drone_x [1], xi is drone_act [0];  
+        //similar format for y position 
         //using euler formula for current x position
 
         drone_act [0] = (Force_x + (2 * K_1 + K_2) * drone_x [0] - K_1 * drone_x [1]) / (K_1 + K_2);
@@ -392,6 +394,6 @@ int main (int argc, char ** argv) {
         usleep (SEC_TO_USEC / frequency);
     }
 
-    Terminate_all (fd_out, fd_wtch, fd_param, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE); //failure because program should never end here
+    Close_all (fd_out, fd_wtch, fd_param, kb_fd, pos_writer, map_semaph, kb_sem, kb_ptr, EXIT_FAILURE); //failure because program should never end here
     return 0;
 }

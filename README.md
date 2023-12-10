@@ -16,15 +16,8 @@ Here is a more detailed description of the 3 processes:
 
 ### Drone dynamics process
 
-The process responsible of the drone's dynamics first reads the parameters from the (editable) *parameters.txt* file structured as follow:
+The process responsible of the drone's dynamics first reads the parameters from the (editable) *parameters.txt* file, then the process runs the following tasks with a frequency of 100 Hz:
 
-1. force increase unit with each key press (in newton) (current value: 1N);
-2. mass of the simulated drone (current value: 0.2 kg);
-3. friction coefficient (current value: 0.5 N/(m/s)));
-4. coefficient modulating the force applied by walls and obstacles to the drone when close enough (current vaue: 20 N/m^3);
-5. maximum distance between drone and an obstacle/ a wall to apply a force to the drone (current value : 5 m);
-
-Then the process runs the following tasks with a frequency of 100 Hz:
 1. receives from the server (using a shared memory) the key pressed and processes the corresponding action : if the w, e, r, f, v, c, x or s keys are pressed the force applied by the virtual thrusters is increased of one increase unit (input parameter) in the corresponding direction (including diagonal), the d key brings to 0 the force of the thrusters, the z key restarts the game and the q makes the process quit while any other key received is treated as no key pressed; 
 2. based on the current position of the drone the force applied by the walls to the drone is computed;
 3. from the current and last positions of the drone (stored inside of the process itself) and the sum of the forces the drone is subject to the next drone position is computed starting from the euler approximation of the model of the drone; the current and last drone positions are the updated per the next loop iteration;
@@ -46,6 +39,19 @@ The task of the watchdog is to periodically monitor the processes' responses in 
 2. waits a bit to ensure that every process has had the chance to answer to the signal by writing to a specific pipe (one per process);
 3. checks which processes answered the signal and updates the last response time of each process accordingly, writing on the logfile when a process has not answered one of these calls;
 4. compares the current time with the last response time: if more than 4 seconds of non-response have passed the watchdog registers this on the logfile and kills all the children processes, causing the game to end.
+
+## Files used in the code
+
+As explained in the processes' description, the software uses two additional files to operate:
+1. parameters.txt: here are stored the modifyable parameters of the dynamics of the drone, structured as follow:
+
+1. force increase unit with each key press (in newton) (current value: 1N);
+2. mass of the simulated drone (current value: 0.2 kg);
+3. friction coefficient (current value: 0.5 N/(m/s)));
+4. coefficient modulating the force applied by walls and obstacles to the drone when close enough (current vaue: 20 N/m^3);
+5. maximum distance between drone and an obstacle/ a wall to apply a force to the drone (current value : 5 m);
+
+2. log_results.txt: here the watchdog writes if a process has not answered to one of the calls or if one process has been non-responsive for more than the maximum time they are allowed to be.
 
 ## How to run and install it
 

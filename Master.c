@@ -23,19 +23,38 @@ int main () {
     int shm_fd;
 
     shm_fd = shm_open (MAP_ADDR, O_CREAT | O_RDWR, 0666);
-    if (shm_fd < 0) perror ("shm open");
+    if (shm_fd < 0) {
+        perror ("shm open");
+        exit (EXIT_FAILURE);
+    }
 
+    if (ftruncate (shm_fd, 2 * sizeof (double)) < 0) {
+        perror ("truncate");
+        exit (EXIT_FAILURE);
+    }
 
-    if (ftruncate (shm_fd, 2 * sizeof (double)) < 0) perror ("truncate");
+    int shm_kb_fd = shm_open (KB_ADDR, O_CREAT | O_RDWR, 0666);
+    if (shm_kb_fd < 0) {
+        printf ("issues here\n");
+        perror ("shm kb open");
+        exit (EXIT_FAILURE);
+    }
 
-    int sh_kb_fd = shm_open (KB_ADDR, O_CREAT | O_RDWR, 0666);
-    if (sh_kb_fd < 0) perror ("shm kb open");
-
-    if (ftruncate (sh_kb_fd, sizeof (int)) < 0) perror ("ftruncate");
-
+    if (ftruncate (shm_kb_fd, sizeof (int)) < 0) {
+        perror ("ftruncate");
+        exit (EXIT_FAILURE);
+    }
     sem_t * map_sem = sem_open (MAP_SEM, O_CREAT, 0666, 1);
+    if (map_sem == SEM_FAILED) {
+        perror ("sem map creation");
+        exit (EXIT_FAILURE);
+    }
 
     sem_t * kb_sem = sem_open (KB_SEM, O_CREAT, 0666, 1);
+    if (kb_sem == SEM_FAILED) {
+        perror ("sem kb creation");
+        exit (EXIT_FAILURE);
+    }
 
     const int proc_numb = 2, proc_kons = 2;
     int null_wait;
@@ -44,13 +63,14 @@ int main () {
     for (int i = 0; i < proc_numb; i++) {
         mkfifo (log_file [i], 0666);
         logfd [i] = open (log_file [i], O_CREAT | O_RDWR, 0666);
-        if (logfd [i] < 0) perror ("log open");
-    }
-    
-    
-    int proc_pid [proc_numb], res;
+        if (logfd [i] < 0) {
+            perror ("log open");
+            exit (EXIT_FAILURE);
+        }
 
-    
+    }
+      
+    int proc_pid [proc_numb], res;
 
     printf ("welcome to the game! here are the commands for the game while the processes are loading\n");
     printf ("use the w, e, r, s, d, f, x, c and v keys to control the drone\n");
@@ -100,7 +120,10 @@ int main () {
 
     int term_child = wait (&null_wait);
 
-    if (term_child < 0) perror ("wait");
+    if (term_child < 0) {
+        perror ("wait");
+        exit (EXIT_FAILURE);
+    }
 
     printf ("one process has terminated\n");
 
@@ -119,6 +142,11 @@ int main () {
     printf ("game finished!\n");
     printf ("bye!\n");
 
+    sem_close (map_sem);
+    sem_close (kb_sem);
+    close (shm_kb_fd);
+    close (shm_fd);
+    
     sem_unlink (MAP_SEM);
     sem_unlink (KB_SEM);
     shm_unlink (MAP_ADDR);

@@ -42,7 +42,7 @@ int main (int argc, char ** argv) {
     sleep (4);
     int select_res, read_res, count;
     char proc_info [proc_numb] [10];
-    char log_str [10];
+    char log_str [10]; //10 is the max number of digits an int number can have
     char log_feedback [80];
     int proc_resp [proc_numb];
     const double max_time = 4;
@@ -67,8 +67,8 @@ int main (int argc, char ** argv) {
             exit (EXIT_FAILURE);
         }
 
-        if (select_res == 0) { //less processes than the expected number has responded, the watchdog terminates immediately to make the game closed by the master process
-            printf ("watchdog here!\nsome process (the %dth one) did not identify itself\n", i);
+        if (select_res == 0) { //less processes than the expected number has answered, the watchdog terminates immediately to make the game closed by the master process
+            printf ("watchdog here!\nsome process did not identify itself\n");
             write (feedback_fd, "some process did not identify itself", 37);
             exit (EXIT_FAILURE);
         }
@@ -82,8 +82,6 @@ int main (int argc, char ** argv) {
         }
         last_resp [i] = curr_time;
     }
-
-    int syscall_res;
 
     while (1) {
 
