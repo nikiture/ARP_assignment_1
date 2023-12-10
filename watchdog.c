@@ -152,7 +152,7 @@ int main (int argc, char ** argv) {
             }
             else {
                 printf ("Watchdog here!\nprocess %d has missed a call\n", ID_monitored [i]);
-                if (sprintf (log_feedback, "%s %d %s", "process", ID_monitored [i], "has missed a call\n") < 0) {
+                if (sprintf (log_feedback, "%s%d%s", "process ", ID_monitored [i], " has missed a call\n") < 0) {
                     perror ("sprintf");
                     for (int j = 0; j < proc_numb; j++) {
                         if (kill (ID_monitored [i], SIGKILL) < 0) {
@@ -186,7 +186,9 @@ int main (int argc, char ** argv) {
                
                 printf ("watchdog here!\nno response from process %d for more than %lf seconds\n", ID_monitored [i], max_time);
                 printf ("killing all processes\n");
-                sprintf (log_feedback, "%s %d %s %lf %s", "no response from process", ID_monitored [i], "for more than", max_time, "seconds\nkilling all processes\n");
+                sprintf (log_feedback, "%s%d%s%lf%s", "no response from process ", ID_monitored [i], " for more than ", max_time, " seconds");
+                write (feedback_fd, log_feedback, strlen (log_feedback));
+                write (feedback_fd, "\nkilling all processes\n", 24);
                 for (int i = 0; i < proc_numb; i++) {
                     kill (ID_monitored [i], SIGKILL);
                 }

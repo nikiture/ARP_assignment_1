@@ -27,8 +27,7 @@ void watchdog_req (int signumb) {
         int fd = open (log_file [log_id], O_WRONLY);
         if (fd < 0) {
             perror ("log_file open");
-            printw ("issues opening file\n\r");
-            refresh ();
+            printf ("issues opening file\n");
         }
 
         int pid = getpid ();
@@ -36,14 +35,12 @@ void watchdog_req (int signumb) {
         
         if (sprintf (logdata, "%d", pid) < 0) {
             perror ("sprintf");
-            printw ("issues formatting\n\r");
-            refresh ();
+            printf ("issues formatting\n");
         }
 
         if (write (fd, logdata, sizeof (logdata)) < 0) {
             perror ("write");
-            printw ("issues writing to file\n\r");
-            refresh ();
+            printf ("issues writing to file\n");
         }
 
         close (fd);
@@ -139,7 +136,6 @@ int update_BB (double * pos, sem_t * map_semaph, void * pos_writer) {
     }
     if (sem_post (map_semaph) < 0) {
         perror ("semaph release");
-        printw ("issues releasing semaphore \n\r");
         Terminate_all (-1, -1, -1, -1, pos_writer, map_semaph, NULL, NULL, EXIT_FAILURE);
     }
 }
@@ -352,7 +348,7 @@ int main (int argc, char ** argv) {
         wall_dist_x = MAP_X_SIZE - drone_act [0];
         wall_dist_y = MAP_Y_SIZE - drone_act [1];
         if (drone_act [0] < ro_max) { //left end, force to the right
-            wall_force_x = - Eta * (1/drone_act [0] - 1/ro_max) /(drone_act [0] * drone_act [0]);
+            wall_force_x = Eta * (1/drone_act [0] - 1/ro_max) /(drone_act [0] * drone_act [0]);
         }
         if (drone_act [1] < ro_max) { //lower end, force upward
             wall_force_y = Eta * (1/drone_act [1] - 1/ro_max) /(drone_act [1] * drone_act [1]);

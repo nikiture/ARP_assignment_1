@@ -89,10 +89,6 @@ int main () {
     }
 
     if (res == 0) {
-        /*konsargwtcdg [0] = "konsole";
-        konsargwtcdg [1] = "-e";
-        konsargwtcdg [2] =  "./watchdog";
-        konsargwtcdg [3] = NULL;*/
         char * konsargwtcdg [] = {"./watchdog", NULL};
 
         if (execvp (konsargwtcdg [0], konsargwtcdg) < 0) {
